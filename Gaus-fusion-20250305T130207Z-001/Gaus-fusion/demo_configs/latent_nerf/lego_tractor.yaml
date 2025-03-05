@@ -1,0 +1,8 @@
+log:
+  exp_name: 'lego_tractor'
+guide:
+  text: 'a highly detailed lego tractor'
+optim:
+  iters: 2500
+render:
+  nerf_type: 'latent'
