@@ -41,7 +41,7 @@
 Our work builds upon the following research:
 
 - [Latent-NeRF for Shape-Guided Generation of 3D Shapes and Textures](https://arxiv.org/abs/2211.07600) (Metzer et al., 2022)
-- [3D Gaussian Splatting for Real-Time Radiance Field Rendering]([https://arxiv.org/abs/2211.07600](https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/3d_gaussian_splatting_high.pdf)) (Kerbl et al., 2023)
+- [3D Gaussian Splatting for Real-Time Radiance Field Rendering]([https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/3d_gaussian_splatting_high.pdf]) (Kerbl et al., 2023)
 
 
 ```bibtex
