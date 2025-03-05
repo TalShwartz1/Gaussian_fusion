@@ -13,13 +13,11 @@
 -More comprehensive viewing angles
 
 ## Results
-![Bonsai](bonsai.png)
-
 ![Tree](tree.png)
-
 ![Flowers](flowers.jpg)
 
 ![Tractor](tractor.png)
+![Bonsai](bonsai.png)
 
 ## Acknowledgments
 Our work builds upon the following research:
