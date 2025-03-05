@@ -14,8 +14,11 @@
 
 ## Results
 ![Bonsai](bonsai.png)
+
 ![Tree](tree.png)
+
 ![Flowers](flowers.jpg)
+
 ![Tractor](tractor.png)
 
 ## Acknowledgments
