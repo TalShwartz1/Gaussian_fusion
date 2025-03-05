@@ -6,20 +6,42 @@
 > This project improves text-to-3D generation by introducing two key modifications to the Latent-NeRF framework by replacing the NeRF architecture with Gaussian Splatting, which has shown promise in novel view synthesis
 > Our experiments demonstrate significant improvements across multiple metrics:
 
-- More detailed object generation
-- Higher PSNR and SSIM scores
-- Clearer and sharper scenes with better multi-view consistency
-- Reduced visual artifacts
-- More comprehensive viewing angles
+-More detailed object generation
+-Higher PSNR and SSIM scores
+-Clearer and sharper scenes with better multi-view consistency
+-Reduced visual artifacts
+-More comprehensive viewing angles
 
 ## Results
-
+<div class="results-container">
+  <h2>Results: Latent Gaussian Splatting</h2>
+  <p class="description">Visualization of 3D objects generated using our Latent Gaussian Splatting approach.</p>
+  
+  <div class="results-grid">
+    <div class="result-item">
+      <img src="tree.png" alt="Tree visualization">
+      <p>Tree structure with optimized anisotropic Gaussians</p>
+    </div>
+    <div class="result-item">
+      <img src="flowers.jpg" alt="Flowers visualization">
+      <p>Flower model showing fine structural details</p>
+    </div>
+    <div class="result-item">
+      <img src="bonsai.png" alt="Bonsai visualization">
+      <p>Bonsai with detailed branch and leaf representation</p>
+    </div>
+    <div class="result-item">
+      <img src="tractor.png" alt="Tractor visualization">
+      <p>Tractor with accurate geometric features</p>
+    </div>
+  </div>
+</div>
 
 ## Acknowledgments
 Our work builds upon the following research:
 
 - [Latent-NeRF for Shape-Guided Generation of 3D Shapes and Textures](https://arxiv.org/abs/2211.07600) (Metzer et al., 2022)
-- [3D Gaussian Splatting for Real-Time Radiance Field Rendering](https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/) (Kerbl et al., 2023)
+- [3D Gaussian Splatting for Real-Time Radiance Field Rendering]([https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/3d_gaussian_splatting_high.pdf]) (Kerbl et al., 2023)
 
 
 ```bibtex
