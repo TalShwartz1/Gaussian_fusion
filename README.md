@@ -19,19 +19,19 @@
   
   <div class="results-grid">
     <div class="result-item">
-      <img src="tree.png" alt="Tree visualization">
+      <img src="Gaus-fusion-20250305T130207Z-001/Gaus-fusion/tree.png" alt="Tree visualization">
       <p>Tree structure with optimized anisotropic Gaussians</p>
     </div>
     <div class="result-item">
-      <img src="flowers.jpg" alt="Flowers visualization">
+      <img src="Gaus-fusion-20250305T130207Z-001/Gaus-fusion/flowers.jpg" alt="Flowers visualization">
       <p>Flower model showing fine structural details</p>
     </div>
     <div class="result-item">
-      <img src="bonsai.png" alt="Bonsai visualization">
+      <img src="Gaus-fusion-20250305T130207Z-001/Gaus-fusion/bonsai.png" alt="Bonsai visualization">
       <p>Bonsai with detailed branch and leaf representation</p>
     </div>
     <div class="result-item">
-      <img src="tractor.png" alt="Tractor visualization">
+      <img src="Gaus-fusion-20250305T130207Z-001/Gaus-fusion/tractor.png" alt="Tractor visualization">
       <p>Tractor with accurate geometric features</p>
     </div>
   </div>
