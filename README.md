@@ -6,11 +6,11 @@
 > This project improves text-to-3D generation by introducing two key modifications to the Latent-NeRF framework by replacing the NeRF architecture with Gaussian Splatting, which has shown promise in novel view synthesis
 > Our experiments demonstrate significant improvements across multiple metrics:
 
--More detailed object generation
--Higher PSNR and SSIM scores
--Clearer and sharper scenes with better multi-view consistency
--Reduced visual artifacts
--More comprehensive viewing angles
+- More detailed object generation
+- Higher PSNR and SSIM scores
+- Clearer and sharper scenes with better multi-view consistency
+- Reduced visual artifacts
+- More comprehensive viewing angles
 
 ## Results
 
@@ -19,7 +19,7 @@
 Our work builds upon the following research:
 
 - [Latent-NeRF for Shape-Guided Generation of 3D Shapes and Textures](https://arxiv.org/abs/2211.07600) (Metzer et al., 2022)
-- [3D Gaussian Splatting for Real-Time Radiance Field Rendering]([https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/3d_gaussian_splatting_low.pdf]) (Kerbl et al., 2023)
+- [3D Gaussian Splatting for Real-Time Radiance Field Rendering](https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/) (Kerbl et al., 2023)
 
 
 ```bibtex
