@@ -13,11 +13,29 @@
 -More comprehensive viewing angles
 
 ## Results
-![Tree](tree.png)
-![Flowers](flowers.jpg)
-
-![Tractor](tractor.png)
-![Bonsai](bonsai.png)
+<div class="results-container">
+  <h2>Results: Latent Gaussian Splatting</h2>
+  <p class="description">Visualization of 3D objects generated using our Latent Gaussian Splatting approach.</p>
+  
+  <div class="results-grid">
+    <div class="result-item">
+      <img src="tree.png" alt="Tree visualization">
+      <p>Tree structure with optimized anisotropic Gaussians</p>
+    </div>
+    <div class="result-item">
+      <img src="bonsai.png" alt="Bonsai visualization">
+      <p>Bonsai with detailed branch and leaf representation</p>
+    </div>
+    <div class="result-item">
+      <img src="tractor.pnpg" alt="Excavator visualization">
+      <p>Construction vehicle with accurate geometric features</p>
+    </div>
+    <div class="result-item">
+      <img src="floers.jpg" alt="Flower visualization">
+      <p>Flower model showing fine structural details</p>
+    </div>
+  </div>
+</div>
 
 ## Acknowledgments
 Our work builds upon the following research:
