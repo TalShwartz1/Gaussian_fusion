@@ -1,4 +1,4 @@
-# Latent Gaussian Splatting 
+# Gaussian Fusion 
 
 > A novel approach for text-guided 3D shape generation that enhances the Latent-NeRF framework by replacing the NeRF architecture with Gaussian Splatting.
 
