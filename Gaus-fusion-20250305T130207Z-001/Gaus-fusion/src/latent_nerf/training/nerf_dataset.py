@@ -192,7 +192,7 @@ class NeRFDataset:
 
 
 class GaussianDataset:
-    def __init__(self, scene, device, type='train', H=875, W=1330, size=100):
+    def __init__(self, scene, device, type='train', H=453, W=460, size=100):
 
         self.H = H
         self.W = W

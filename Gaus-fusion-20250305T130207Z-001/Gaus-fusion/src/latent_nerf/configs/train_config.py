@@ -15,7 +15,7 @@ class GuideConfig:
     # Append direction to text prompts
     # Yaniv ------------------------------------------------------------------------------------------------------------
     # append_direction: bool = True
-    append_direction: bool = False
+    append_direction: bool = True
     # A Textual-Inversion concept to use
     concept_name: Optional[str] = None
     # A huggingface diffusion model to use
@@ -39,10 +39,10 @@ class OptimConfig:
     seed: int = 0
     # Total iters - Yaniv ----------------------------------------------------------------------------------------------
     # iters: int = 5000
-    iters: int = 2500
+    iters: int = 10000
     # Learning rate
     # lr: float = 1e-3
-    lr: float = 0.3e-3
+    lr: float = 0.03e-3
     # use amp mixed precision training
     fp16: bool = True
     # Start shading at this iteration
@@ -61,7 +61,7 @@ class LogConfig:
     # Experiment output dir
     exp_root: Path = Path('experiments/')
     # How many steps between save step
-    save_interval: int = 100
+    save_interval: int = 1000
     # Run only test
     eval_only: bool = False
     # Number of angles to sample for eval during training
@@ -71,6 +71,7 @@ class LogConfig:
     # Number of past checkpoints to keep
     max_keep_ckpts: int = 2
     # Skip decoding and vis only depth and normals
+    # yaniv - skip_rgb -------------------------------------------------------------------------------------------------
     skip_rgb: bool = False
     # YANIV ------------------------------------------------------------------------------------------------------------
     data_root = Path('data/my_data/')
@@ -105,26 +106,51 @@ class PipelineConfig:
 
 @dataclass
 class OptimConfig_g:
-    iterations: int = 2500
-    position_lr_init: float = 0.00016
-    position_lr_final: float = 0.0000016
+    # iterations: int = 120
+    # position_lr_init: float = 0.00016
+    # position_lr_final: float = 0.0000016
+    # position_lr_delay_mult: float = 0.01
+    # position_lr_max_steps: int = 30_000
+    # feature_lr: float = 0.0025
+    # opacity_lr: float = 0.025
+    # scaling_lr: float = 0.005
+    # rotation_lr: float = 0.001
+    # exposure_lr_init: float = 0.01
+    # exposure_lr_final: float = 0.001
+    # exposure_lr_delay_steps: int = 0
+    # exposure_lr_delay_mult: float = 0.0
+    # percent_dense: float = 0.01
+    # lambda_dssim: float = 0.2
+    # densification_interval: int = 20
+    # opacity_reset_interval: int = 30
+    # densify_from_iter: int = 1
+    # densify_until_iter: int = 15_000
+    # densify_grad_threshold: float = 0.0002
+    # depth_l1_weight_init: float = 1.0
+    # depth_l1_weight_final: float = 0.01
+    # random_background: bool = False
+    # optimizer_type: str = "default"
+    # yaniv - changing lr in OptimConfig_g -----------------------------------------------------------------------------
+    iterations: int = 6000
+    position_lr_init: float = 0.0016
+    position_lr_final: float = 0.00016
     position_lr_delay_mult: float = 0.01
-    position_lr_max_steps: int = 30_000
-    feature_lr: float = 0.0025
-    opacity_lr: float = 0.025
-    scaling_lr: float = 0.005
-    rotation_lr: float = 0.001
-    exposure_lr_init: float = 0.01
-    exposure_lr_final: float = 0.001
+    position_lr_max_steps: int = 7
+    feature_lr: float = 0.05
+    opacity_lr: float = 0.005
+    scaling_lr: float = 0.004
+    rotation_lr: float = 0.05
+    exposure_lr_init: float = 0.00001
+    exposure_lr_final: float = 0.000001
     exposure_lr_delay_steps: int = 0
     exposure_lr_delay_mult: float = 0.0
     percent_dense: float = 0.01
     lambda_dssim: float = 0.2
-    densification_interval: int = 100
-    opacity_reset_interval: int = 30
+    densification_interval: int = 1000
+    opacity_reset_interval: int = 100
     densify_from_iter: int = 1
-    densify_until_iter: int = 15_000
-    densify_grad_threshold: float = 0.0002
+    densify_until_iter: int = 5800
+    densify_grad_threshold: float = 0.000002
     depth_l1_weight_init: float = 1.0
     depth_l1_weight_final: float = 0.01
     random_background: bool = False

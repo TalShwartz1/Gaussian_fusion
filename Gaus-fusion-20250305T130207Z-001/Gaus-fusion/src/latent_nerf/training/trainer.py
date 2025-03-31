@@ -20,6 +20,7 @@ from src.stable_diffusion import StableDiffusion
 from src.utils import make_path, tensor2numpy
 
 # Yaniv ----------------------------------------------------------------------------------------------------------------
+import math
 import os
 from argparse import Namespace
 import uuid
@@ -29,6 +30,7 @@ from utils.general_utils import get_expon_lr_func
 from utils.loss_utils import l1_loss, ssim
 from gaussian_renderer import render
 from PIL import Image
+import torch.nn.functional as F
 
 try:
     from torch.utils.tensorboard import SummaryWriter
@@ -160,7 +162,7 @@ class Trainer:
             text_z = self.diffusion.get_text_embeds([ref_text])
         else:
             text_z = []
-            for d in ['front', 'side', 'back', 'side', 'overhead', 'bottom']:
+            for d in ['front', 'left side', 'back', 'right side', 'overhead', 'bottom']:
                 text = f"{ref_text}, {d} view"
                 text_z.append(self.diffusion.get_text_embeds([text]))
         return text_z
@@ -471,8 +473,22 @@ class Trainer:
 
 # Yaniv ----------------------------------------------------------------------------------------------------------------
 class Trainer_gaus:
-
+    # def __init__(self, cfg: TrainConfig, position_lr, feature_lr, opacity_lr, scaling_lr, exposure_lr, percent_dense):
     def __init__(self, cfg: TrainConfig):
+
+        self.position_lr = cfg.g_optim.position_lr_init
+        self.feature_lr = cfg.g_optim.feature_lr
+        self.opacity_lr = cfg.g_optim.opacity_lr
+        self.scaling_lr = cfg.g_optim.scaling_lr
+        self.exposure_lr = cfg.g_optim.exposure_lr_init
+        self.learning_rates = np.array([self.opacity_lr, self.scaling_lr, self.feature_lr,
+                                        self.feature_lr/40, self.position_lr])
+        self.index = np.array([0, 0, 0, 0, 1])
+        self.lr_update = 100
+        # self.percent_dense = cfg.g_optim.percent_dense
+
+        # def __init__(self, cfg: TrainConfig
+
         if not SPARSE_ADAM_AVAILABLE and cfg.g_optim.optimizer_type == "sparse_adam":
             sys.exit(
                 f"Trying to use sparse adam but it is not installed,"
@@ -494,7 +510,7 @@ class Trainer_gaus:
         self.init_logger()
         # self.tb_writer = self.prepare_output_and_logger()
 
-        # pyrallis.dump(self.cfg, (self.exp_path / 'config.yaml').open('w'))
+        pyrallis.dump(self.cfg, (self.exp_path / 'config.yaml').open('w'))
 
         # self.nerf = self.init_nerf()
         self.gaussians = GaussianModel(cfg.g_model.sh_degree, cfg.g_optim.optimizer_type)
@@ -516,7 +532,8 @@ class Trainer_gaus:
         # dataset = lp.extract(args)
 
         dataset = lp.extract_default()
-        self.scene = Scene(dataset, self.gaussians)
+        # yaniv - shuffle=false ----------------------------------------------------------------------------------------
+        self.scene = Scene(dataset, self.gaussians, shuffle=False)
 
         op = OptimizationParams(cfg.g_optim)
         opt = op.extract_default()
@@ -649,6 +666,210 @@ class Trainer_gaus:
             print("Tensorboard not available: not logging progress")
         return tb_writer
 
+    def contrast_loss(self, image, kernel_size=3):
+        """
+        Computes a loss based on contrast, where lower contrast results in higher loss.
+
+        Args:
+            image (torch.Tensor): Input image tensor of shape (C, H, W) in range [0, 1].
+            kernel_size (int): Size of the local window for contrast computation.
+
+        Returns:
+            torch.Tensor: Contrast-based loss (higher for low contrast).
+        """
+        # Convert RGB image to grayscale for contrast measurement
+        grayscale = 0.299 * image[0] + 0.587 * image[1] + 0.114 * image[2]  # (H, W)
+
+        # Compute local mean
+        padding = kernel_size // 2
+        local_mean = F.avg_pool2d(grayscale.unsqueeze(0).unsqueeze(0), kernel_size, stride=1, padding=padding)
+
+        # Compute local contrast (standard deviation)
+        local_sq_mean = F.avg_pool2d((grayscale ** 2).unsqueeze(0).unsqueeze(0), kernel_size, stride=1, padding=padding)
+        local_var = local_sq_mean - local_mean ** 2
+        local_std = torch.sqrt(torch.clamp(local_var, min=1e-6))  # Avoid NaN
+
+        # Loss: Inverse of contrast (mean of inverted std)
+        loss = 1 / (local_std.mean() + 1e-6)  # Higher for low contrast
+
+        return loss
+
+    # def dark_channel(self, image, patch_size=15):
+    #     """
+    #     Compute the dark channel of an image.
+    #
+    #     Args:
+    #         image (torch.Tensor): Input image tensor of shape (C, H, W) with values in [0, 1].
+    #         patch_size (int): Size of the patch to compute the minimum filter.
+    #
+    #     Returns:
+    #         torch.Tensor: Dark channel of the image of shape (H, W).
+    #     """
+    #     # Ensure the image has 3 channels
+    #     assert image.shape[0] == 3, "Input image must have 3 channels (RGB)."
+    #
+    #     # Pad the image to handle borders
+    #     pad_size = patch_size // 2
+    #     padded_image = F.pad(image, (pad_size, pad_size, pad_size, pad_size), mode='replicate')
+    #
+    #     # Extract patches and compute the minimum intensity for each patch
+    #     patches = padded_image.unfold(1, patch_size, 1).unfold(2, patch_size, 1)
+    #     dark_channel_im = patches.min(dim=3)[0].min(dim=3)[0].min(dim=0)[0]
+    #
+    #     return dark_channel_im
+    #
+    # def haze_loss(self, image, patch_size=15):
+    #     """
+    #     Compute a haze-related loss based on the dark channel prior.
+    #
+    #     Args:
+    #         image (torch.Tensor): Input image tensor of shape (C, H, W) with values in [0, 1].
+    #         patch_size (int): Size of the patch to compute the dark channel.
+    #
+    #     Returns:
+    #         torch.Tensor: Scalar loss value; higher if the image has more haze.
+    #     """
+    #     # Compute the dark channel
+    #     dark_channel_map = self.dark_channel(image, patch_size)
+    #
+    #     # The loss is the mean intensity of the dark channel
+    #     loss = dark_channel_map.mean()
+    #
+    #     return loss
+
+    def dark_channel(self, image, patch_size=15):
+        """
+        Compute the dark channel of an image.
+
+        Args:
+            image (torch.Tensor): Input image tensor of shape (3, H, W) with values in [0, 1].
+            patch_size (int): Size of the patch for the minimum filter.
+
+        Returns:
+            torch.Tensor: Dark channel of the image of shape (H, W).
+        """
+        # Assume image has 3 channels (RGB)
+        pad_size = patch_size // 2
+        padded = F.pad(image, (pad_size, pad_size, pad_size, pad_size), mode='replicate')
+
+        # Extract patches; the result will be shape (C, H, W, patch_size, patch_size)
+        patches = padded.unfold(1, patch_size, 1).unfold(2, patch_size, 1)
+        # For each patch, find the minimum over the spatial dimensions and channels
+        dark = patches.min(dim=-1)[0].min(dim=-1)[0].min(dim=0)[0]
+
+        return dark
+
+    def haze_loss(self, image, patch_size=15):
+        """
+        Compute a haze loss based on the dark channel prior.
+
+        Args:
+            image (torch.Tensor): Input image tensor of shape (3, H, W) with values in [0, 1].
+            patch_size (int): Patch size for dark channel computation.
+
+        Returns:
+            torch.Tensor: Scalar haze loss; higher when haze (mist) is present.
+        """
+        dark = self.dark_channel(image, patch_size)
+        loss = dark.mean()
+        return loss
+
+    def color_diversity_loss(self, image, diversity_threshold=0.2):
+        """
+        Compute a loss term that penalizes low color diversity.
+
+        We measure per-pixel color diversity as the difference between the maximum and
+        minimum channel values. If the average diversity is below a threshold, this loss term
+        will be high.
+
+        Args:
+            image (torch.Tensor): Input image tensor of shape (3, H, W) with values in [0, 1].
+            diversity_threshold (float): Desired minimum average diversity.
+
+        Returns:
+            torch.Tensor: Scalar loss that is zero if diversity is above the threshold, or
+                          proportional to the deficit otherwise.
+        """
+        # Compute the per-pixel max and min over channels.
+        max_per_pixel, _ = image.max(dim=0)  # shape (H, W)
+        min_per_pixel, _ = image.min(dim=0)  # shape (H, W)
+        diversity = (max_per_pixel - min_per_pixel).mean()  # average diversity over all pixels
+
+        # If diversity is too low, penalize it.
+        loss = torch.relu(diversity_threshold - diversity)
+        return loss
+
+    def color_balance_loss(self, image):
+        """
+        Compute a loss to preserve balanced per-channel contrast.
+
+        We measure the standard deviation for each color channel. If one channel deviates
+        significantly from the average contrast across channels, we incur a penalty.
+
+        Args:
+            image (torch.Tensor): Input image tensor of shape (3, H, W) with values in [0, 1].
+
+        Returns:
+            torch.Tensor: Scalar loss that is higher when one or more channels differ in contrast.
+        """
+        std_r = image[0].std()
+        std_g = image[1].std()
+        std_b = image[2].std()
+        mean_std = (std_r + std_g + std_b) / 3.0
+        # Penalize deviations from the mean standard deviation
+        loss = torch.abs(std_r - mean_std) + torch.abs(std_g - mean_std) + torch.abs(std_b - mean_std)
+        return loss
+
+    def haze_and_color_loss(self, image, patch_size=15, diversity_threshold=0.2, lambda_color=1.0):
+        """
+        Combine haze loss and color preservation loss into a single loss function.
+
+        Args:
+            image (torch.Tensor): Input image tensor of shape (3, H, W) with values in [0, 1].
+            patch_size (int): Patch size used for dark channel computation.
+            diversity_threshold (float): Desired minimum average color diversity.
+            lambda_color (float): Weight for the color diversity loss term.
+
+        Returns:
+            torch.Tensor: Combined loss; high when there is haze or insufficient color diversity.
+        """
+        loss_haze = self.haze_loss(image, patch_size)
+        # loss_color = self.color_diversity_loss(image, diversity_threshold)
+        loss_color = self.color_balance_loss(image)
+        total_loss = loss_haze + lambda_color * loss_color
+        return total_loss
+
+    def smoothness_loss(self, image):
+        """
+        Compute a loss that penalizes lack of smoothness in an image.
+
+        Args:
+            image (torch.Tensor): Image tensor of shape (C, H, W) with values in [0, 1].
+
+        Returns:
+            torch.Tensor: A scalar loss value; higher if the image is less smooth.
+        """
+        # Calculate horizontal and vertical differences.
+        # Horizontal differences: differences between adjacent pixels along width.
+        diff_h = torch.abs(image[:, :, 1:] - image[:, :, :-1])
+        # Vertical differences: differences between adjacent pixels along height.
+        diff_v = torch.abs(image[:, 1:, :] - image[:, :-1, :])
+
+        # Total Variation loss: the mean of all differences.
+        loss = diff_h.mean() + diff_v.mean()
+
+        return loss
+
+    def cyclic_shift_right_k(vector, k):
+        # Ensure the vector is not empty
+        if not vector:
+            return vector
+
+        # Perform the cyclic shift by k positions
+        k = k % len(vector)  # In case k is larger than the vector length
+        return vector[-k:] + vector[:-k]
+
+    # def train(self, position_lr, scaling_lr, exposure_lr, percent_dense):
     def train(self):
         logger.info('Starting training ^_^')
 
@@ -677,15 +898,33 @@ class Trainer_gaus:
 
         # first_iter += 1
         iteration = 0
-        print("total number of iterations: ",  self.cfg.optim.iters, '\n')
+        # self.cfg.optim.iters = 10
+        SH_update = 100
+
+        # self.cfg.g_optim.position_lr_init = position_lr
+        # self.cfg.g_optim.position_lr_final = position_lr / 10
+        # # self.cfg.g_optim.feature_lr = feature_lr
+        # # self.cfg.g_optim.opacity_lr = opacity_lr
+        # self.cfg.g_optim.scaling_lr = scaling_lr
+        # self.cfg.g_optim.exposure_lr_init = exposure_lr
+        # self.cfg.g_optim.exposure_lr_final = exposure_lr / 10
+        # self.cfg.g_optim.percent_dense = percent_dense
+
         while self.train_step < self.cfg.optim.iters:
             for data in self.dataloaders['train']:
 
                 iter_start.record()
-                self.gaussians.update_learning_rate(iteration)
+
+                # Yaniv - lr changes ---------------------------------------------------------------------------
+                if iteration % self.lr_update == 0:
+                    self.index = np.roll(self.index, shift=1)
+
+                self.gaussians.update_learning_rate(iteration, self.index, self.learning_rates)
+
+                # self.gaussians.update_learning_rate(iteration)
 
                 # Every 1000 its we increase the levels of SH up to a maximum degree
-                if iteration % 1000 == 0:
+                if iteration % SH_update == 0:
                     self.gaussians.oneupSHdegree()
 
                 # # Randomly shuffle train viewpoints if stack is exhausted
@@ -706,7 +945,7 @@ class Trainer_gaus:
                 pbar.update(1)
 
                 # return here!!
-                # self.scene.gaussians.optimizer.zero_grad(set_to_none=True)  # should it rather be just self.gaussians?
+                self.scene.gaussians.optimizer.zero_grad(set_to_none=True)  # should it rather be just self.gaussians?
                 # also do i need set_to_none=True? ---------------------------------------------------------------------
 
                 # viewpoint_cam = data['viewpoint_cam']
@@ -716,7 +955,11 @@ class Trainer_gaus:
                 pred_image = render_pkg["render"]
                 viewspace_points = render_pkg["viewspace_points"]
                 visibility_filter = render_pkg["visibility_filter"]
+                # yaniv - changed radii --------------------------------------------------------------------------------
                 radii = render_pkg["radii"]
+
+                # print("radii ", radii, "\n")
+                # print(pred_image.shape)
 
                 viewpoint_cam = data['viewpoint_cam']
                 if viewpoint_cam.alpha_mask is not None:
@@ -747,7 +990,28 @@ class Trainer_gaus:
                 else:
                     Ll1depth = 0
 
-                loss.backward()
+                # yaniv - con and haze loss ----------------------------------------------------------------------------
+                # loss = loss * 1000000000000
+
+                loss_color = self.color_balance_loss(pred_image) * 10000000 * 0.5
+                # loss_color.backward(retain_graph=True)
+
+                # loss_value = self.haze_and_color_loss(pred_image, patch_size=15,
+                #                                       diversity_threshold=1.0, lambda_color=0.007)
+                # haze_loss = loss_value * 10000000
+                haze_loss = self.haze_loss(pred_image) * 1000
+                # haze_loss.backward(retain_graph=True)
+
+                smooth_value = self.smoothness_loss(pred_image) * 10000000 * 0.04
+                # smooth_value.backward(retain_graph=True)
+
+                con_loss = self.contrast_loss(pred_image) * 20
+                # print(con_loss)
+                # con_loss.backward()
+
+                # print("con_loss = ", con_loss, ", haze_loss = ", haze_loss, "\n")
+                # print(haze_loss)
+                # loss.backward()
 
                 # print("total loss = Guidance + Ll1 + ssim_value + Ll1depth \n")
                 # print(loss,  " = ", loss_guidance,  " + ", (1.0 - self.opt.lambda_dssim) * Ll1
@@ -755,7 +1019,7 @@ class Trainer_gaus:
 
                 iter_end.record()
 
-                with torch.no_grad():
+                with (((torch.no_grad()))):
                     self.ema_loss_for_log = 0.4 * loss.item() + 0.6 * self.ema_loss_for_log
                     self.ema_Ll1depth_for_log = 0.4 * Ll1depth + 0.6 * self.ema_Ll1depth_for_log
                     # # if self.train_step % self.cfg.log.save_interval == 0:
@@ -792,22 +1056,28 @@ class Trainer_gaus:
                         # print(" im here", iteration, " % ", self.opt.densification_interval, " = ",
                         #       iteration % self.opt.densification_interval == 0
                         #       , "\n")
-                        print("densification_interval = ", self.opt.densification_interval, '\n')
-                        if iteration > self.opt.densify_from_iter and iteration % self.opt.densification_interval == 0:
 
+                        # Yaniv - create gaussians every iteration -----------------------------------------------------
+                        # self.opt.densification_interval = 50
+                        self.cfg.log.save_interval = 3000
+                        max_clone = 1000
+
+                        if iteration > self.opt.densify_from_iter and iteration % self.opt.densification_interval == 0:
                             size_threshold = 20 if iteration > self.opt.opacity_reset_interval else None
-                            # return here!!
+
                             self.gaussians.densify_and_prune(self.opt.densify_grad_threshold, 0.005,
                                                              self.scene.cameras_extent, size_threshold, radii)
 
-                            # num_visible_points = visibility_filter.sum().item()
-                            # print(f"Iteration {iteration}: Visible points for densification = {num_visible_points}")
-                            # print(
-                            #     f"Iteration {iteration}: Max radius = {radii.max().item()}, Min radius = {radii.min().item()}")
-                            # self.gaussians.densify_and_prune(
-                            #     self.opt.densify_grad_threshold, 0.01,  # Increase from 0.005
-                            #     self.scene.cameras_extent, None, radii  # Remove `size_threshold`
-                            # )
+                        # yaniv - removing cloudy gaussians ------------------------------------------------------------
+                        if iteration == 0:
+                            R = 2.25
+                            self.gaussians.remove_distinct(R)
+                        # self.full_eval()
+                        # yaniv - cloning at the start -----------------------------------------------------------------
+                        # if 4 > iteration > 1:
+                        #     size_threshold = 20 if iteration > self.opt.opacity_reset_interval else None
+                        #     self.gaussians.densify_and_prune(self.opt.densify_grad_threshold, 0.005,
+                        #                                      self.scene.cameras_extent, size_threshold, radii)
 
                         if iteration % self.opt.opacity_reset_interval == 0 or (
                                 self.dataset.white_background and iteration == self.opt.densify_from_iter):
@@ -833,6 +1103,7 @@ class Trainer_gaus:
                     #                self.scene.model_path + "/chkpnt" + str(iteration) + ".pth")
 
                     # return here!! ------------------------------------------------------------------------------------
+
                     if self.train_step % self.cfg.log.save_interval == 0:
                         self.evaluate(self.dataloaders['val'], self.eval_renders_path)
                         self.scene.gaussians.train()
@@ -846,13 +1117,12 @@ class Trainer_gaus:
                         # Save the checkpoint
                         torch.save((self.gaussians.capture(), iteration), filepath)
 
-
                     # return here!! ------------------------------------------------------------------------------------
                     # print(pred_image.shape)
-                    if np.random.uniform(0, 1) < 0.05:
-                        self.log_train_renders(pred_image)
+                    # if np.random.uniform(0, 1) < 0.05:
+                    self.log_train_renders(pred_image)
 
-                        self.gaussians.print_gaussian_stats()
+                    # self.gaussians.print_gaussian_stats()
 
                     # if np.random.uniform(0, 1) < 0.05:
                     #     # Randomly log rendered images throughout the training
@@ -905,26 +1175,33 @@ class Trainer_gaus:
 
             # return here !! -------------------------------------------------------------------------------------------
             # pred, pred_depth = tensor2numpy(preds[0]), tensor2numpy(preds_depth[0])
+            Image.fromarray(pred).save(save_path / f"{self.train_step}_{i:04d}_rgb.png")
+            Image.fromarray(pred_depth).save(save_path / f"{self.train_step}_{i:04d}_depth.png")
 
             if save_as_video:
                 all_preds.append(pred)
                 all_preds_depth.append(pred_depth)
             else:
                 if not self.cfg.log.skip_rgb:
+                    # print("hi")
                     Image.fromarray(pred).save(save_path / f"{self.train_step}_{i:04d}_rgb.png")
                 Image.fromarray(pred_depth).save(save_path / f"{self.train_step}_{i:04d}_depth.png")
+                # print("hi")
 
-        if save_as_video:
-            all_preds = np.stack(all_preds, axis=0)
-            all_preds_depth = np.stack(all_preds_depth, axis=0)
+        # if save_as_video:
+        #     all_preds = np.stack(all_preds, axis=0)
+        #     all_preds_depth = np.stack(all_preds_depth, axis=0)
+        #
+        #     dump_vid = lambda video, name: imageio.mimsave(save_path / f"{self.train_step}_{name}.mp4", video, fps=25,
+        #                                                    quality=8, macro_block_size=1)
 
-            dump_vid = lambda video, name: imageio.mimsave(save_path / f"{self.train_step}_{name}.mp4", video, fps=25,
-                                                           quality=8, macro_block_size=1)
-
-            if not self.cfg.log.skip_rgb:
-                dump_vid(all_preds, 'rgb')
-            dump_vid(all_preds_depth, 'depth')
+            # if not self.cfg.log.skip_rgb:
+            #     dump_vid(all_preds, 'rgb')
+            # dump_vid(all_preds_depth, 'depth')
         logger.info('Done!')
+
+    # def full_eval(self):
+    #     self.evaluate(self.dataloaders['val_large'], self.final_renders_path, save_as_video=True)
 
     # def full_eval(self):
     #     self.evaluate(self.dataloaders['val_large'], self.final_renders_path, save_as_video=True)
@@ -955,7 +1232,32 @@ class Trainer_gaus:
         # print(outputs['depth'].shape)
         # pred_ws = outputs['depth'].reshape(B, 1, H, W)
 
-        text_z = self.text_z
+        modified_viewmatrix = viewpoint_cam.world_view_transform.clone()
+        # Extract the camera's forward direction (negative Z-axis of the view matrix)
+        cam_forward = -modified_viewmatrix[:3, 2]  # shape [3]
+        cam_forward = cam_forward / cam_forward.norm()  # normalize
+
+        # Convert the Cartesian direction to spherical coordinates:
+        theta = math.acos(cam_forward[2].item())  # angle from the z-axis
+        phi = math.atan2(cam_forward[1].item(), cam_forward[0].item())  # angle in the x-y plane
+
+        # Convert radians to degrees
+        theta = math.degrees(theta)
+        phi = math.degrees(phi)
+        if phi < 0:
+            phi += 360  # Ensure phi is in the range [0, 360)
+
+        dirs = utils.get_view_direction_float(theta, phi, 30, 70)
+        # print("dir = ", dirs, "\n")
+
+        if self.cfg.guide.append_direction:
+            # dirs = data['dir']  # [B,]
+            text_z = self.text_z[dirs]
+        else:
+            text_z = self.text_z
+
+        # text_z = self.text_z
+
         # print("text = ", text_z)
         # text_z = torch.stack(self.text_z, dim=0).mean(dim=0, keepdim=True)
         # I don't believe this is ok.. ---------------------------------------------------------------------------------
