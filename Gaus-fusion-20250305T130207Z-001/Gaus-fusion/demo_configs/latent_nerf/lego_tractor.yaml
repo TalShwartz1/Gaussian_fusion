@@ -1,7 +1,7 @@
 log:
   exp_name: 'lego_tractor'
 guide:
-  text: 'a highly detailed lego tractor'
+  text: 'burger'
 optim:
   iters: 2500
 render:
