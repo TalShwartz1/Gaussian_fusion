@@ -69,7 +69,7 @@ class ModelParams(ParamGroup):
             self._images = "images"
             self._depths = ""
             self._resolution = -1
-            self._white_background = False
+            self._white_background = True
             self.train_test_exp = False
             self.data_device = "cuda"
             self.eval = False
@@ -161,26 +161,27 @@ class OptimizationParams(ParamGroup):
         - If `arg` is an OptimConfig_g instance: Use dataclass-style initialization.
         """
         if isinstance(arg, ArgumentParser):  # Case 1: Using argparse
+            # yaniv - changing lr in OptimizationParams ----------------------------------------------------------------
             parser = arg
             self.iterations = 2500
             # self.position_lr_init = 0.00016
-            self.position_lr_init = 0.00005
-            self.position_lr_final = 0.0000016
+            self.position_lr_init = 0.0016
+            self.position_lr_final = 0.00016
             self.position_lr_delay_mult = 0.01
             # self.position_lr_max_steps = 30_000
-            self.position_lr_max_steps = 50_000
+            self.position_lr_max_steps = 30_000
             # self.feature_lr = 0.0025
-            self.feature_lr = 0.0015
+            self.feature_lr = 0.025
             # self.opacity_lr = 0.025
-            self.opacity_lr = 0.01
+            self.opacity_lr = 0.005
             # self.scaling_lr = 0.005
-            self.scaling_lr = 0.0025
+            self.scaling_lr = 0.05
             # self.rotation_lr = 0.001
-            self.rotation_lr = 0.0005
-            self.exposure_lr_init = 0.01
-            self.exposure_lr_final = 0.001
+            self.rotation_lr = 0.01
+            self.exposure_lr_init = 0.001
+            self.exposure_lr_final = 0.0001
             # self.exposure_lr_delay_steps = 0
-            self.exposure_lr_delay_steps = 50
+            self.exposure_lr_delay_steps = 0
             self.exposure_lr_delay_mult = 0.0
             self.percent_dense = 0.01
             self.lambda_dssim = 0.2
@@ -189,9 +190,10 @@ class OptimizationParams(ParamGroup):
             # yaniv ----------------------------------------------------------------------------------------------------
             # self.densify_from_iter = 500
             self.densification_interval = 100
-            self.opacity_reset_interval = 3000
+            self.opacity_reset_interval = 120
             self.densify_from_iter = 3
-            self.densify_until_iter = 1250
+            # yaniv - densify until iteration --------------------------------------------------------------------------
+            self.densify_until_iter = 15_000
             self.densify_grad_threshold = 0.0002
             self.depth_l1_weight_init = 1.0
             self.depth_l1_weight_final = 0.01
