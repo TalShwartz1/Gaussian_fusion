@@ -181,7 +181,8 @@ class GaussianModel(nn.Module):
         self._xyz = nn.Parameter(fused_point_cloud.requires_grad_(True))
         self._features_dc = nn.Parameter(features[:, :, 0:1].transpose(1, 2).contiguous().requires_grad_(True))
         self._features_rest = nn.Parameter(features[:, :, 1:].transpose(1, 2).contiguous().requires_grad_(True))
-        self._scaling = nn.Parameter(scales.requires_grad_(True))
+        # yaniv - return here !!!! -------------------------------------------------------------------------------------
+        self._scaling = nn.Parameter((scales * 1).requires_grad_(True))
         self._rotation = nn.Parameter(rots.requires_grad_(True))
         self._opacity = nn.Parameter(opacities.requires_grad_(True))
         self.max_radii2D = torch.zeros((self.get_xyz.shape[0]), device="cuda")
@@ -195,15 +196,27 @@ class GaussianModel(nn.Module):
         self.xyz_gradient_accum = torch.zeros((self.get_xyz.shape[0], 1), device="cuda")
         self.denom = torch.zeros((self.get_xyz.shape[0], 1), device="cuda")
 
+        # yaniv - learning rate changes in training_setup - training_args.feature_lr / 20.0 ----------------------------
+
+        # l = [
+        #     {'params': [self._xyz], 'lr': training_args.position_lr_init * self.spatial_lr_scale, "name": "xyz"},
+        #     {'params': [self._features_dc], 'lr': training_args.feature_lr, "name": "f_dc"},
+        #     {'params': [self._features_rest], 'lr': training_args.feature_lr / 20.0, "name": "f_rest"},
+        #     {'params': [self._opacity], 'lr': training_args.opacity_lr, "name": "opacity"},
+        #     {'params': [self._scaling], 'lr': training_args.scaling_lr, "name": "scaling"},
+        #     {'params': [self._rotation], 'lr': training_args.rotation_lr, "name": "rotation"}
+        # ]
+
         l = [
             {'params': [self._xyz], 'lr': training_args.position_lr_init * self.spatial_lr_scale, "name": "xyz"},
-            {'params': [self._features_dc], 'lr': training_args.feature_lr, "name": "f_dc"},
-            {'params': [self._features_rest], 'lr': training_args.feature_lr / 20.0, "name": "f_rest"},
+            {'params': [self._features_dc], 'lr': training_args.feature_lr*10, "name": "f_dc"},
+            {'params': [self._features_rest], 'lr': training_args.feature_lr/40, "name": "f_rest"},
             {'params': [self._opacity], 'lr': training_args.opacity_lr, "name": "opacity"},
             {'params': [self._scaling], 'lr': training_args.scaling_lr, "name": "scaling"},
             {'params': [self._rotation], 'lr': training_args.rotation_lr, "name": "rotation"}
         ]
 
+        # yaniv - betas=(0.9, 0.99) ------------------------------------------------------------------------------------
         if self.optimizer_type == "default":
             self.optimizer = torch.optim.Adam(l, eps=1e-15)
         elif self.optimizer_type == "sparse_adam":
@@ -229,17 +242,44 @@ class GaussianModel(nn.Module):
                                                          lr_delay_mult=training_args.exposure_lr_delay_mult,
                                                          max_steps=training_args.iterations)
 
-    def update_learning_rate(self, iteration):
+    # yaniv - change how the learning rate is being updated ------------------------------------------------------------
+    # def update_learning_rate(self, iteration)
+    def update_learning_rate(self, iteration, index, learning_rates):
         ''' Learning rate scheduling per step '''
         if self.pretrained_exposures is None:
             for param_group in self.exposure_optimizer.param_groups:
                 param_group['lr'] = self.exposure_scheduler_args(iteration)
 
+        # for dictionary in self.optimizer.param_groups:
+        #     print(dictionary.keys())
+        #     print(dictionary.values())
+        # yaniv - printing lr ------------------------------------------------------------------------------------------
+
+        opacity_lr, scaling_lr, dc_lr, rest_lr,  position_lr_init = learning_rates * index
+
         for param_group in self.optimizer.param_groups:
+            # print(param_group["name"])
             if param_group["name"] == "xyz":
                 lr = self.xyz_scheduler_args(iteration)
                 param_group['lr'] = lr
-                return lr
+                if position_lr_init == 0:
+                    param_group['lr'] = 0
+                # return lr
+            if param_group["name"] == "f_dc":
+                param_group['lr'] = dc_lr
+                # print("hi\n")
+
+            if param_group["name"] == "f_rest":
+                param_group['lr'] = rest_lr
+
+            if param_group["name"] == "opacity":
+                param_group['lr'] = opacity_lr
+
+            if param_group["name"] == "scaling":
+                param_group['lr'] = scaling_lr
+
+
+
 
     def construct_list_of_attributes(self):
         l = ['x', 'y', 'z', 'nx', 'ny', 'nz']
@@ -274,6 +314,7 @@ class GaussianModel(nn.Module):
         el = PlyElement.describe(elements, 'vertex')
         PlyData([el]).write(path)
 
+    # yaniv - opacity reset --------------------------------------------------------------------------------------------
     def reset_opacity(self):
         opacities_new = self.inverse_opacity_activation(
             torch.min(self.get_opacity, torch.ones_like(self.get_opacity) * 0.01))
@@ -445,7 +486,59 @@ class GaussianModel(nn.Module):
         self.denom = torch.zeros((self.get_xyz.shape[0], 1), device="cuda")
         self.max_radii2D = torch.zeros((self.get_xyz.shape[0]), device="cuda")
 
-    def densify_and_split(self, grads, grad_threshold, scene_extent, N=1, max_points=500000):
+    # def densify_and_split(self, grads, grad_threshold, scene_extent, N=1):
+    #     # Yaniv - it was N=2 before ------------------------------------------------------------------------------------
+    #     n_init_points = self.get_xyz.shape[0]
+    #     # Extract points that satisfy the gradient condition
+    #     padded_grad = torch.zeros((n_init_points), device="cuda")
+    #     padded_grad[:grads.shape[0]] = grads.squeeze()
+    #     selected_pts_mask = torch.where(padded_grad >= grad_threshold, True, False)
+    #     selected_pts_mask = torch.logical_and(selected_pts_mask,
+    #                                           torch.max(self.get_scaling,
+    #                                                     dim=1).values > self.percent_dense * scene_extent)
+    #
+    #     stds = self.get_scaling[selected_pts_mask].repeat(N, 1)
+    #     means = torch.zeros((stds.size(0), 3), device="cuda")
+    #     samples = torch.normal(mean=means, std=stds)
+    #     rots = build_rotation(self._rotation[selected_pts_mask]).repeat(N, 1, 1)
+    #     # new_xyz = torch.bmm(rots, samples.unsqueeze(-1)).squeeze(-1) + self.get_xyz[selected_pts_mask].repeat(N, 1)
+    #     # Yaniv --------------------------------------------------------------------------------------------------------
+    #     new_xyz = torch.bmm(rots, samples.unsqueeze(-1)).squeeze(-1) + self.get_xyz[selected_pts_mask].unsqueeze(
+    #         1).expand(-1, N, -1).reshape(-1, 3)
+    #     new_scaling = self.scaling_inverse_activation(self.get_scaling[selected_pts_mask].repeat(N, 1) / (0.8 * N))
+    #     new_rotation = self._rotation[selected_pts_mask].repeat(N, 1)
+    #     new_features_dc = self._features_dc[selected_pts_mask].repeat(N, 1, 1)
+    #     new_features_rest = self._features_rest[selected_pts_mask].repeat(N, 1, 1)
+    #     new_opacity = self._opacity[selected_pts_mask].repeat(N, 1)
+    #     new_tmp_radii = self.tmp_radii[selected_pts_mask].repeat(N)
+    #
+    #     self.densification_postfix(new_xyz, new_features_dc, new_features_rest, new_opacity, new_scaling, new_rotation,
+    #                                new_tmp_radii)
+    #
+    #     prune_filter = torch.cat(
+    #         (selected_pts_mask, torch.zeros(N * selected_pts_mask.sum(), device="cuda", dtype=bool)))
+    #     self.prune_points(prune_filter)
+    #
+    # def densify_and_clone(self, grads, grad_threshold, scene_extent):
+    #     # Extract points that satisfy the gradient condition
+    #     selected_pts_mask = torch.where(torch.norm(grads, dim=-1) >= grad_threshold, True, False)
+    #     selected_pts_mask = torch.logical_and(selected_pts_mask,
+    #                                           torch.max(self.get_scaling,
+    #                                                     dim=1).values <= self.percent_dense * scene_extent)
+    #
+    #     new_xyz = self._xyz[selected_pts_mask]
+    #     new_features_dc = self._features_dc[selected_pts_mask]
+    #     new_features_rest = self._features_rest[selected_pts_mask]
+    #     new_opacities = self._opacity[selected_pts_mask]
+    #     new_scaling = self._scaling[selected_pts_mask]
+    #     new_rotation = self._rotation[selected_pts_mask]
+    #
+    #     new_tmp_radii = self.tmp_radii[selected_pts_mask]
+    #
+    #     self.densification_postfix(new_xyz, new_features_dc, new_features_rest, new_opacities, new_scaling,
+    #                                new_rotation, new_tmp_radii)
+
+    def densify_and_split(self, grads, grad_threshold, scene_extent, N=1, max_points=1000000):
         # Yaniv - it was N=2 before ------------------------------------------------------------------------------------
         if self.get_xyz.shape[0] >= max_points:
             return max_points
@@ -453,7 +546,15 @@ class GaussianModel(nn.Module):
         # Extract points that satisfy the gradient condition
         padded_grad = torch.zeros((n_init_points), device="cuda")
         padded_grad[:grads.shape[0]] = grads.squeeze()
+
+        # Yaniv - with p -----------------------------------------------------------------------------------------------
         selected_pts_mask = torch.where(padded_grad >= grad_threshold, True, False)
+        # p = 6.95 * 10 ** -3
+        # p = 1
+        # candidate_mask = padded_grad >= grad_threshold
+        # random_mask = torch.rand(padded_grad.shape, device="cuda") < p
+        # selected_pts_mask = torch.where(candidate_mask & random_mask, True, False)
+
         selected_pts_mask = torch.logical_and(selected_pts_mask,
                                               torch.max(self.get_scaling,
                                                         dim=1).values > self.percent_dense * scene_extent)
@@ -480,11 +581,19 @@ class GaussianModel(nn.Module):
             (selected_pts_mask, torch.zeros(N * selected_pts_mask.sum(), device="cuda", dtype=bool)))
         self.prune_points(prune_filter)
 
-    def densify_and_clone(self, grads, grad_threshold, scene_extent, max_points=500000):
+    def densify_and_clone(self, grads, grad_threshold, scene_extent, max_points=1000000):
         # Extract points that satisfy the gradient condition
         if self.get_xyz.shape[0] >= max_points:
             return max_points
+
+        # Yaniv - with p -----------------------------------------------------------------------------------------------
         selected_pts_mask = torch.where(torch.norm(grads, dim=-1) >= grad_threshold, True, False)
+        # p = 6.95 * 10**-3
+        # p = 1
+        # candidate_mask = torch.norm(grads, dim=-1) >= grad_threshold
+        # random_mask = torch.rand_like(torch.norm(grads, dim=-1)) < p
+        # selected_pts_mask = torch.where(candidate_mask & random_mask, True, False)
+
         selected_pts_mask = torch.logical_and(selected_pts_mask,
                                               torch.max(self.get_scaling,
                                                         dim=1).values <= self.percent_dense * scene_extent)
@@ -501,11 +610,16 @@ class GaussianModel(nn.Module):
         self.densification_postfix(new_xyz, new_features_dc, new_features_rest, new_opacities, new_scaling,
                                    new_rotation, new_tmp_radii)
 
+    # yaniv - changed densify_and_prune so it will stop densifying but continue to prune -------------------------------
+    # def densify_and_prune(self, max_grad, min_opacity, extent, max_screen_size, radii, max_clone, iter):
     def densify_and_prune(self, max_grad, min_opacity, extent, max_screen_size, radii):
+        # yaniv - removed denom ----------------------------------------------------------------------------------------
         grads = self.xyz_gradient_accum / self.denom
         grads[grads.isnan()] = 0.0
-
         self.tmp_radii = radii
+
+        # yaniv - added/removed a condition AND changed max_grad -------------------------------------------------------
+        # if iter < max_clone:
         self.densify_and_clone(grads, max_grad, extent)
         self.densify_and_split(grads, max_grad, extent)
 
@@ -519,6 +633,61 @@ class GaussianModel(nn.Module):
         self.tmp_radii = None
 
         torch.cuda.empty_cache()
+
+    # yaniv - adding new function removing distinct gaussians ----------------------------------------------------------
+    def remove_distinct(self, R):
+        """
+        Remove gaussians whose any coordinate (x, y, or z) is greater than R.
+
+        Parameters:
+            R (float): The threshold value. Any gaussian with at least one coordinate
+                       (x, y, or z) > R will be removed.
+        """
+        # Build a boolean mask that is True for points to remove.
+        # print(self.get_xyz.shape)
+        prune_mask = (self.get_xyz > R).any(dim=1).squeeze()
+        # print(prune_mask.shape)
+        # Ensure self.tmp_radii has the same number of elements as self.get_xyz.
+        # This prevents an indexing error in prune_points.
+        if self.tmp_radii is None or self.tmp_radii.shape[0] != self.get_xyz.shape[0]:
+            self.tmp_radii = torch.zeros(self.get_xyz.shape[0], device=self.get_xyz.device)
+
+        # Remove the points by calling the existing prune_points method.
+        self.prune_points(prune_mask)
+
+        # Reset tmp_radii as per your convention.
+        tmp_radii = self.tmp_radii
+        self.tmp_radii = None
+        torch.cuda.empty_cache()
+
+    # def remove_gaussians_with_large_coordinate(self, R):
+    #     """
+    #     Remove gaussians whose any coordinate (x, y, or z) exceeds R in absolute value.
+    #
+    #     Parameters:
+    #         R (float): The threshold value. Any gaussian with at least one coordinate
+    #                    |x|, |y|, or |z| > R will be removed.
+    #     """
+    #     # Create a mask for points to remove
+    #     mask = (torch.abs(self.get_xyz) > R).any(dim=1)
+    #     # Invert mask to get valid points
+    #     valid_mask = ~mask
+    #
+    #     # Prune optimizable tensors using the internal function
+    #     optimizable_tensors = self._prune_optimizer(valid_mask)
+    #     self._xyz = optimizable_tensors["xyz"]
+    #     self._features_dc = optimizable_tensors["f_dc"]
+    #     self._features_rest = optimizable_tensors["f_rest"]
+    #     self._opacity = optimizable_tensors["opacity"]
+    #     self._scaling = optimizable_tensors["scaling"]
+    #     self._rotation = optimizable_tensors["rotation"]
+    #
+    #     self.xyz_gradient_accum = self.xyz_gradient_accum[valid_mask]
+    #     self.denom = self.denom[valid_mask]
+    #     self.max_radii2D = self.max_radii2D[valid_mask]
+    #     # Only update tmp_radii if it is not None
+    #     if self.tmp_radii is not None:
+    #         self.tmp_radii = self.tmp_radii[valid_mask]
 
     def add_densification_stats(self, viewspace_point_tensor, update_filter):
         self.xyz_gradient_accum[update_filter] += torch.norm(viewspace_point_tensor.grad[update_filter, :2], dim=-1,
@@ -537,4 +706,3 @@ class GaussianModel(nn.Module):
         print(f"Average Opacity: {avg_opacity:.6f}")
         print(f"Average Color (DC): {avg_color_dc:.6f}")
         print(f"Average Color (Rest): {avg_color_rest:.6f}")
-
