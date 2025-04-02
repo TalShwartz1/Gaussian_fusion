@@ -31,7 +31,7 @@
         <p>Tractor</p>
     </div>
     <div class="result-item">
-        <img src="Gaus-fusion-20250305T130207Z-001/Gaus-fusion/vase.gig" alt="Tractor visualization" width="200">
+        <img src="Gaus-fusion-20250305T130207Z-001/Gaus-fusion/vase.gif" alt="Tractor visualization" width="200">
         <p>Vase with flowers</p>
     </div>
 </div>
