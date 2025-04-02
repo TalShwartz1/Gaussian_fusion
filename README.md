@@ -15,7 +15,6 @@ Our experiments demonstrate significant improvements across multiple metrics:
 
 ## Results
 <div class="results-container">
-  <h2>Results: Latent Gaussian Splatting</h2>
   <p class="description">Visualization of 3D objects generated using our Latent Gaussian Splatting approach.</p>
   
   <div class="results-grid">
