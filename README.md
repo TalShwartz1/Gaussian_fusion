@@ -19,12 +19,12 @@
   
   <div class="results-grid">
     <div class="result-item">
-      <img src="Gaus-fusion-20250305T130207Z-001/Gaus-fusion/tree.png" alt="Tree visualization">
-      <p>Tree structure with optimized anisotropic Gaussians</p>
+      <img src="Gaus-fusion-20250305T130207Z-001/Gaus-fusion/burger.gif" alt="Tree visualization">
+      <p>3D burger</p>
     </div>
     <div class="result-item">
-      <img src="Gaus-fusion-20250305T130207Z-001/Gaus-fusion/flowers.jpg" alt="Flowers visualization">
-      <p>Flower model showing fine structural details</p>
+      <img src="Gaus-fusion-20250305T130207Z-001/Gaus-fusion/bonsai.gif" alt="Flowers visualization">
+      <p>F3D bonsai</p>
     </div>
     <div class="result-item">
       <img src="Gaus-fusion-20250305T130207Z-001/Gaus-fusion/bonsai.png" alt="Bonsai visualization">
