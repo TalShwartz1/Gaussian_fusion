@@ -19,19 +19,19 @@ Our experiments demonstrate significant improvements across multiple metrics:
   
   <div class="results-grid">
     <div class="result-item">
-        <img src="Gaus-fusion-20250305T130207Z-001/Gaus-fusion/burger.gif" alt="Tree visualization" width="200">
+        <img src="burger.gif" alt="Tree visualization" width="200">
         <p>Realistic burger with complex shapes</p>
     </div>
     <div class="result-item">
-        <img src="Gaus-fusion-20250305T130207Z-001/Gaus-fusion/bonsai.gif" alt="Flowers visualization" width="200">
+        <img src="bonsai.gif" alt="Flowers visualization" width="200">
         <p>Bonsai with detailed branch and leaf representation</p>
     </div>
     <div class="result-item">
-        <img src="Gaus-fusion-20250305T130207Z-001/Gaus-fusion/tractor.gif" alt="Bonsai visualization" width="200">
+        <img src="tractor.gif" alt="Bonsai visualization" width="200">
         <p>Tractor</p>
     </div>
     <div class="result-item">
-        <img src="Gaus-fusion-20250305T130207Z-001/Gaus-fusion/vase.gif" alt="Tractor visualization" width="200">
+        <img src="vase.gif" alt="Tractor visualization" width="200">
         <p>Vase with flowers</p>
     </div>
 </div>
