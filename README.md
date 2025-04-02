@@ -59,6 +59,7 @@
   5. For changing the text prompt, go to demo_configs/latent_nerf/lego_tractor.yaml.
   6. Activate the code in the terminal using: python -m scripts.train_latent_nerf --config_path demo_configs/latent_nerf/lego_tractor.yaml
   7. For seeing the results, go to the experiment directory and explore the training results, evaluation results and final results.
+  8. For the full documentary of the project, read the attached article.
 
 ## Acknowledgments
 Our work builds upon the following research:
