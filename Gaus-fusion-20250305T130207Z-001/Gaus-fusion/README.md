@@ -19,8 +19,8 @@
   
   <div class="results-grid">
     <div class="result-item">
-      <img src="tree.png" alt="Tree visualization">
-      <p>Tree structure with optimized anisotropic Gaussians</p>
+      <img src="burger.gif" alt="Tree visualization">
+      <p>3D Burger</p>
     </div>
     <div class="result-item">
       <img src="flowers.jpg" alt="Flowers visualization">
