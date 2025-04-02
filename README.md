@@ -19,23 +19,23 @@
   
   <div class="results-grid">
     <div class="result-item">
-      <img src="Gaus-fusion-20250305T130207Z-001/Gaus-fusion/burger.gif" alt="Tree visualization">
-      <p>3D burger</p>
+        <img src="Gaus-fusion-20250305T130207Z-001/Gaus-fusion/burger.gif" alt="Tree visualization" width="200">
+        <p>3D burger</p>
     </div>
     <div class="result-item">
-      <img src="Gaus-fusion-20250305T130207Z-001/Gaus-fusion/bonsai.gif" alt="Flowers visualization">
-      <p>F3D bonsai</p>
+        <img src="Gaus-fusion-20250305T130207Z-001/Gaus-fusion/bonsai.gif" alt="Flowers visualization" width="200">
+        <p>F3D bonsai</p>
     </div>
     <div class="result-item">
-      <img src="Gaus-fusion-20250305T130207Z-001/Gaus-fusion/bonsai.png" alt="Bonsai visualization">
-      <p>Bonsai with detailed branch and leaf representation</p>
+        <img src="Gaus-fusion-20250305T130207Z-001/Gaus-fusion/bonsai.png" alt="Bonsai visualization" width="200">
+        <p>Bonsai with detailed branch and leaf representation</p>
     </div>
     <div class="result-item">
-      <img src="Gaus-fusion-20250305T130207Z-001/Gaus-fusion/tractor.png" alt="Tractor visualization">
-      <p>Tractor with accurate geometric features</p>
+        <img src="Gaus-fusion-20250305T130207Z-001/Gaus-fusion/tractor.png" alt="Tractor visualization" width="200">
+        <p>Tractor with accurate geometric features</p>
     </div>
-  </div>
 </div>
+
 
 ## Acknowledgments
 Our work builds upon the following research:
