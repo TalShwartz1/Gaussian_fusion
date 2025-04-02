@@ -58,7 +58,9 @@
   4. Note that you need a token for stable diffusion First accept conditions for the model you want to use, default one is CompVis/stable-diffusion-v1-4. Then, add a TOKEN file access token to the root folder of this project, or use the huggingface-cli login command. More explamaition in Latent Nerf repository. After downloading the tokens, add them to the main folder of the project.
   5. For changing the text prompt, go to demo_configs/latent_nerf/lego_tractor.yaml.
   6. Activate the code in the terminal using: 
+
 python -m scripts.train_latent_nerf --config_path demo_configs/latent_nerf/lego_tractor.yaml
+
   7. For seeing the results, go to the experiment directory and explore the training results, evaluation results and final results.
   8. For the full documentary of the project, read the attached article.
 
