@@ -20,15 +20,15 @@
   <div class="results-grid">
     <div class="result-item">
         <img src="Gaus-fusion-20250305T130207Z-001/Gaus-fusion/burger.gif" alt="Tree visualization" width="200">
-        <p>3D burger</p>
+        <p>Realistic burger with complex shapes</p>
     </div>
     <div class="result-item">
         <img src="Gaus-fusion-20250305T130207Z-001/Gaus-fusion/bonsai.gif" alt="Flowers visualization" width="200">
-        <p>F3D bonsai</p>
+        <p>Bonsai with detailed branch and leaf representation</p>
     </div>
     <div class="result-item">
-        <img src="Gaus-fusion-20250305T130207Z-001/Gaus-fusion/bonsai.png" alt="Bonsai visualization" width="200">
-        <p>Bonsai with detailed branch and leaf representation</p>
+        <img src="Gaus-fusion-20250305T130207Z-001/Gaus-fusion/tractor.gif" alt="Bonsai visualization" width="200">
+        <p>Tractor</p>
     </div>
     <div class="result-item">
         <img src="Gaus-fusion-20250305T130207Z-001/Gaus-fusion/tractor.png" alt="Tractor visualization" width="200">
