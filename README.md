@@ -36,6 +36,29 @@
     </div>
 </div>
 
+## Setup
+1. Install conda.
+2. pip install the following environments:
+    - opencv-python
+    - joblib
+    - transformers
+    - diffusers
+    - accelerate
+    - huggingface-hub
+    - ninja
+    - xatlas
+    - imageio
+    - matplotlib
+    - pyrallis
+    - loguru
+    - tqdm
+    - pytorch=2.5.1
+    - plyfile
+  3. Install cudatools. We have use version 12.4 which was compatible with pytorch 2.5.1
+  4. Note that you need a token for stable diffusion First accept conditions for the model you want to use, default one is CompVis/stable-diffusion-v1-4. Then, add a TOKEN file access token to the root folder of this project, or use the huggingface-cli login command. More explamaition in Latent Nerf repository. After downloading the tokens, add them to the main folder of the project.
+  5. For changing the text prompt, go to demo_configs/latent_nerf/lego_tractor.yaml.
+  6. Activate the code in the terminal using: python -m scripts.train_latent_nerf --config_path demo_configs/latent_nerf/lego_tractor.yaml
+  7. For seeing the results, go to the experiment directory and explore the training results, evaluation results and final results.
 
 ## Acknowledgments
 Our work builds upon the following research:
